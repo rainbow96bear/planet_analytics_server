@@ -38,12 +38,12 @@ func (r *AnalyticsRepository) SaveEvent(
 
 	return r.db.Exec(`
 		INSERT INTO analytics_event
-		(event_name, user_id, anonymous_id, session_id, occurred_at, properties)
+		(event_name, user_id, client_id, session_id, occurred_at, properties)
 		VALUES (?, ?, ?, ?, to_timestamp(?), ?)
 	`,
 		e.EventName,
 		e.UserId,
-		e.AnonymousId,
+		e.ClientId,
 		e.SessionId,
 		e.OccurredAt,
 		e.Properties,
