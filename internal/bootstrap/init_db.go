@@ -1,0 +1,48 @@
+package bootstrap
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/rainbow96bear/planet_analytics_server/config"
+	"github.com/rainbow96bear/planet_utils/pkg/logger"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+// InitDatabase: PostgreSQL 데이터베이스 연결을 초기화하고 GORM DB 인스턴스를 반환합니다.
+func InitDatabase() (*gorm.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Seoul",
+		config.DB_HOST,
+		config.DB_PORT,
+		config.DB_USER,
+		config.DB_PASSWORD,
+		config.DB_NAME,
+	)
+	logger.Debugf("PostgreSQL DSN: %s", dsn)
+
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to open GORM DB: %w", err)
+	}
+
+	// sql.DB 가져오기 → 커넥션 풀 설정
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	// 연결 확인
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	logger.Infof("✅ Successfully connected to PostgreSQL [%s:%s/%s]", config.DB_HOST, config.DB_PORT, config.DB_NAME)
+
+	return gormDB, nil
+}

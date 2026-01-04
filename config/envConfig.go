@@ -1,0 +1,97 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+
+	"github.com/joho/godotenv"
+	"github.com/rainbow96bear/planet_utils/pkg/logger"
+)
+
+func InitConfig(mode string) {
+	var err error
+
+	switch mode {
+	case "prod":
+		err = godotenv.Load("./env/.env.prod")
+	case "dev":
+		err = godotenv.Load("./env/.env.dev")
+	}
+
+	if err != nil {
+		fmt.Println("[CONFIG] fail to load .env file, 기본값 dev 사용")
+	}
+
+	// default config
+	PORT = getString("PORT")
+	ANALYTICS_GRPC_PORT = getString("ANALYTICS_GRPC_PORT")
+
+	USER_GRPC_SERVER_ADDR = getString("USER_GRPC_SERVER_ADDR")
+
+	LOG_LEVEL = getInt16("LOG_LEVEL")
+
+	// jwt key
+	JWT_SECRET_KEY = getString("JWT_SECRET_KEY")
+	PLANET_CLIENT_ADDR = getString("PLANET_CLIENT_ADDR")
+	PLANET_CLIENT_DOMAIN = getString("PLANET_CLIENT_DOMAIN")
+
+	DB_USER = getString("DB_USER")
+	DB_PASSWORD = getString("DB_PASSWORD")
+	DB_HOST = getString("DB_HOST")
+	DB_PORT = getString("DB_PORT")
+	DB_NAME = getString("DB_NAME")
+}
+
+func getString(envName string) string {
+	v := os.Getenv(envName)
+	if v == "" {
+		logger.Errorf("[CONFIG] %s not set\n", envName)
+		os.Exit(1)
+	}
+	return v
+}
+
+func getInt(envName string) int {
+	v := os.Getenv(envName)
+	if v == "" {
+		logger.Errorf("[CONFIG] %s not set\n", envName)
+		os.Exit(1)
+	}
+	num, err := strconv.Atoi(v)
+	if err != nil {
+		logger.Errorf("[CONFIG] %s must be int, got %s\n", envName, v)
+		os.Exit(1)
+	}
+	return num
+}
+
+func getInt16(envName string) int16 {
+	v := os.Getenv(envName)
+	if v == "" {
+		logger.Errorf("[CONFIG] %s not set\n", envName)
+		os.Exit(1)
+	}
+	num, err := strconv.Atoi(v)
+	if err != nil {
+		logger.Errorf("[CONFIG] %s must be int, got %s\n", envName, v)
+		os.Exit(1)
+	}
+	return int16(num)
+}
+
+func getUint64(envName string) uint64 {
+	v := os.Getenv(envName)
+	if v == "" {
+		logger.Errorf("[CONFIG] %s not set\n", envName)
+		os.Exit(1)
+	}
+
+	num, err := strconv.ParseUint(v, 10, 64)
+	if err != nil {
+		logger.Errorf("[CONFIG] %s must be a valid uint64, got %s\n", envName, v)
+		os.Exit(1)
+	}
+
+	return num
+}
