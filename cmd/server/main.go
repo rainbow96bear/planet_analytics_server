@@ -70,7 +70,6 @@ func main() {
 	dependencies, err := bootstrap.InitDependencies(db)
 	if err != nil {
 		logger.Errorf("fail to init Dependencies %s", err.Error())
-		os.Exit(1)
 	}
 
 	go grpcserver.RunGrpcServer(dependencies)

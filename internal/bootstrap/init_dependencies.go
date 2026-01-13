@@ -1,8 +1,9 @@
 package bootstrap
 
 import (
+	"time"
+
 	"github.com/rainbow96bear/planet_analytics_server/internal/grpc/client"
-	grpcclient "github.com/rainbow96bear/planet_analytics_server/internal/grpc/client"
 	"github.com/rainbow96bear/planet_analytics_server/internal/repository"
 	"github.com/rainbow96bear/planet_analytics_server/internal/service"
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 
 type Dependencies struct {
 	Repos       *Repositories
-	GrpcClients *grpcclient.GrpcClients
+	GrpcClients *client.GrpcClients
 	Services    *Services
 }
 
@@ -26,23 +27,32 @@ type Services struct {
 }
 
 func InitDependencies(db *gorm.DB) (*Dependencies, error) {
-	// --- Repository 초기화 ---
 	repos := initRepositories(db)
 
-	// // --- gRPC Clients 초기화 ---
-	grpcClients, err := grpcclient.NewGrpcClients()
-	if err != nil {
-		return nil, err
+	deps := &Dependencies{
+		Repos:       repos,
+		GrpcClients: nil, // 처음엔 없음
 	}
 
-	// // --- Service 초기화 ---
-	services := initServices(db, repos, grpcClients)
+	// Services는 "빈 gRPC" 상태로 먼저 생성
+	// deps.Services = initServices(db, repos, deps.GrpcClients)
+	deps.Services = initServices(db, repos)
 
-	// // DI Container 패턴
-	return &Dependencies{
-		Repos:    repos,
-		Services: services,
-	}, nil
+	// background reconnect
+	go func() {
+		for {
+			grpcClients, err := client.NewGrpcClients()
+			if err != nil {
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			deps.GrpcClients = grpcClients
+			break
+		}
+	}()
+
+	return deps, nil
 }
 
 func initRepositories(db *gorm.DB) *Repositories {
@@ -58,9 +68,11 @@ func initRepositories(db *gorm.DB) *Repositories {
 func initServices(
 	db *gorm.DB,
 	repos *Repositories,
-	grpcClients *client.GrpcClients,
 ) *Services {
-	analyticsSvc := service.NewAnalyticsService(db, repos.Analytics, &grpcClients.User)
+	analyticsSvc := service.NewAnalyticsService(
+		db,
+		repos.Analytics,
+	)
 
 	// profileSvc := service.NewProfileService(db, repos.Profile)
 
